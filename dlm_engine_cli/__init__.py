@@ -221,7 +221,7 @@ def main():
     elif parsed_args.method == 'users':
         if parsed_args.sub_method == 'add':
             dlm_engine_cli.users_add(
-                user=parsed_args.id,
+                _id=parsed_args.id,
                 admin=parsed_args.admin,
                 email=parsed_args.email,
                 name=parsed_args.name,
@@ -229,15 +229,15 @@ def main():
             )
         elif parsed_args.sub_method == 'delete':
             dlm_engine_cli.users_delete(
-                user=parsed_args.id
+                _id=parsed_args.id
             )
         elif parsed_args.sub_method == 'get':
             dlm_engine_cli.users_get(
-                user=parsed_args.id
+                _id=parsed_args.id
             )
         elif parsed_args.sub_method == 'update':
             dlm_engine_cli.users_add(
-                user=parsed_args.id,
+                _id=parsed_args.id,
                 admin=parsed_args.admin,
                 email=parsed_args.email,
                 name=parsed_args.name,
@@ -251,28 +251,28 @@ def main():
     elif parsed_args.method == 'user_credentials':
         if parsed_args.sub_method == 'add':
             dlm_engine_cli.user_credentials_add(
-                user=parsed_args.user,
+                user_id=parsed_args.user,
                 description=parsed_args.description
             )
         elif parsed_args.sub_method == 'delete':
             dlm_engine_cli.user_credentials_delete(
                 _id=parsed_args.id,
-                user=parsed_args.user
+                user_id=parsed_args.user
             )
         elif parsed_args.sub_method == 'get':
             dlm_engine_cli.user_credentials_get(
                 _id=parsed_args.id,
-                user=parsed_args.user
+                user_id=parsed_args.user
             )
         elif parsed_args.sub_method == 'update':
             dlm_engine_cli.user_credentials_update(
                 _id=parsed_args.id,
-                user=parsed_args.user,
+                user_id=parsed_args.user,
                 description=parsed_args.description
             )
         elif parsed_args.sub_method == 'list':
             dlm_engine_cli.user_credentials_list(
-                user=parsed_args.user
+                user_id=parsed_args.user
             )
 
 
@@ -350,19 +350,23 @@ class DLMEngineCLI(object):
                 params[key] = value
         return params
 
+    @staticmethod
+    def locks_print(data):
+        table = texttable.Texttable()
+        table.set_deco(texttable.Texttable.HEADER)
+        table.add_rows(rows=[['ID', 'acquired_by', 'acquired_since']], header=True)
+        for row in data['data']['results']:
+            table.add_row([
+                row['data']['id'],
+                row['data']['acquired_by'],
+                row['data']['acquired_since'],
+            ])
+        print(table.draw())
+
     def locks_add(self, lock, by, secret):
         body = self._api_body(acquired_by=by, secret=secret)
         result = self._api(url='locks/{0}'.format(lock), body=body, method='post')
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'acquired_by', 'acquired_since']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['acquired_by'],
-                result['data']['acquired_since']
-            ])
-            print(table.draw())
+        self.locks_print({'data': {'results': [result]}})
 
     def locks_delete(self, lock, by, secret):
         body = self._api_body(acquired_by=by, secret=secret)
@@ -371,16 +375,7 @@ class DLMEngineCLI(object):
 
     def locks_get(self, lock):
         result = self._api(url='locks/{0}'.format(lock))
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'acquired_by', 'acquired_since']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['acquired_by'],
-                result['data']['acquired_since']
-            ])
-            print(table.draw())
+        self.locks_print({'data': {'results': [result]}})
 
     def locks_list(self, locks, acquired_by):
         params = self._api_params(
@@ -388,17 +383,7 @@ class DLMEngineCLI(object):
             acquired_by=acquired_by
         )
         result = self._api(url='locks/_search', params=params)
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'acquired_by', 'acquired_since']], header=True)
-            for row in result['data']['results']:
-                table.add_row([
-                    row['data']['id'],
-                    row['data']['acquired_by'],
-                    row['data']['acquired_since'],
-                ])
-            print(table.draw())
+        self.locks_print(result)
 
     @staticmethod
     def permissions_print(data):
@@ -522,123 +507,80 @@ class DLMEngineCLI(object):
         self.log.info("finished running command: {0}".format(args))
         return p.wait()
 
-    def users_add(self, user, admin, email, name, password, method='post'):
+    @staticmethod
+    def users_print(data):
+        table = texttable.Texttable()
+        table.set_deco(texttable.Texttable.HEADER)
+        table.add_rows(rows=[['ID', 'admin', 'name', 'email']], header=True)
+        for row in data['data']['results']:
+            table.add_row([
+                row['data']['id'],
+                row['data']['admin'],
+                row['data']['name'],
+                row['data']['email'],
+            ])
+        print(table.draw())
+
+    def users_add(self, _id, admin, email, name, password, method='post'):
         body = self._api_body(
             admin=admin,
             email=email,
             name=name,
             password=password
         )
-        result = self._api(url='users/{0}'.format(user), body=body, method=method)
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'admin', 'email', 'name']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['admin'],
-                result['data']['email'],
-                result['data']['name']
-            ])
-            print(table.draw())
+        result = self._api(url='users/{0}'.format(_id), body=body, method=method)
+        self.users_print({'data': {'results': [result]}})
 
-    def users_delete(self, user):
-        self._api(url='users/{0}'.format(user), method='delete')
+    def users_delete(self, _id):
+        self._api(url='users/{0}'.format(_id), method='delete')
         print("OK")
 
-    def users_get(self, user):
-        result = self._api(url='users/{0}'.format(user))
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'admin', 'email', 'name']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['admin'],
-                result['data']['email'],
-                result['data']['name']
-            ])
-            print(table.draw())
+    def users_get(self, _id):
+        result = self._api(url='users/{0}'.format(_id))
+        self.users_print({'data': {'results': [result]}})
 
     def users_list(self, _id):
         params = self._api_params(
             id=_id
         )
         result = self._api(url='users/_search', params=params)
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'admin', 'name', 'email']], header=True)
-            for row in result['data']['results']:
-                table.add_row([
-                    row['data']['id'],
-                    row['data']['admin'],
-                    row['data']['name'],
-                    row['data']['email'],
-                ])
-            print(table.draw())
+        self.users_print(result)
 
-    def user_credentials_add(self, user, description):
+    @staticmethod
+    def user_credentials_print(data):
+        table = texttable.Texttable()
+        table.set_deco(texttable.Texttable.HEADER)
+        table.add_rows(rows=[['ID', 'created', 'description']], header=True)
+        for row in data['data']['results']:
+            table.add_row([
+                row['data']['id'],
+                row['data']['created'],
+                row['data']['description']
+            ])
+        print(table.draw())
+
+    def user_credentials_add(self, user_id, description):
         body = self._api_body(
             description=description
         )
-        result = self._api(url='users/{0}/credentials'.format(user), body=body, method='post')
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'secret', 'created', 'description']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['secret'],
-                result['data']['created'],
-                result['data']['description']
-            ])
-            print(table.draw())
+        result = self._api(url='users/{0}/credentials'.format(user_id), body=body, method='post')
+        self.user_credentials_print({'data': {'results': [result]}})
 
-    def user_credentials_delete(self, _id, user):
-        self._api(url='users/{0}/credentials/{1}'.format(user, _id), method='delete')
+    def user_credentials_delete(self, _id, user_id):
+        self._api(url='users/{0}/credentials/{1}'.format(user_id, _id), method='delete')
         print("OK")
 
-    def user_credentials_get(self, _id, user):
-        result = self._api(url='users/{0}/credentials/{1}'.format(user, _id))
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'created', 'description']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['created'],
-                result['data']['description']
-            ])
-            print(table.draw())
+    def user_credentials_get(self, _id, user_id):
+        result = self._api(url='users/{0}/credentials/{1}'.format(user_id, _id))
+        self.user_credentials_print({'data': {'results': [result]}})
 
-    def user_credentials_list(self, user):
-        result = self._api(url='users/{0}/credentials'.format(user))
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'created', 'description']], header=True)
-            for row in result['data']['results']:
-                table.add_row([
-                    row['data']['id'],
-                    row['data']['created'],
-                    row['data']['description']
-                ])
-            print(table.draw())
+    def user_credentials_list(self, user_id):
+        result = self._api(url='users/{0}/credentials'.format(user_id))
+        self.user_credentials_print(result)
 
-    def user_credentials_update(self, _id, user, description):
+    def user_credentials_update(self, _id, user_id, description):
         body = self._api_body(
             description=description
         )
-        result = self._api(url='users/{0}/credentials/{1}'.format(user, _id), body=body, method='put')
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'secret', 'created', 'description']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['secret'],
-                result['data']['created'],
-                result['data']['description']
-            ])
-            print(table.draw())
+        result = self._api(url='users/{0}/credentials/{1}'.format(user_id, _id), body=body, method='put')
+        self.user_credentials_print({'data': {'results': [result]}})
