@@ -18,6 +18,10 @@ def str2bool(v):
     return v.lower() in ("yes", "true", "1")
 
 
+def list2newline_string(v):
+    return '{0}'.format(os.linesep).join(v)
+
+
 def main():
     parser = argparse.ArgumentParser(description="DLMEngine CLI")
     parser.add_argument('--raw', dest='raw', action='store_true', default=False)
@@ -105,10 +109,10 @@ def main():
 
     users_add = users_subparsers.add_parser('add', help='add user')
     users_add.add_argument('--id', dest='id', action='store', required=True, default='_self')
-    users_add.add_argument('--admin', dest='id', action='store', required=False, default=False, type=str2bool)
-    users_add.add_argument('--email', dest='id', action='store', required=True)
-    users_add.add_argument('--name', dest='id', action='store', required=True)
-    users_add.add_argument('--password', dest='id', action='store', required=True)
+    users_add.add_argument('--admin', dest='admin', action='store', required=False, default=False, type=str2bool)
+    users_add.add_argument('--email', dest='email', action='store', required=True)
+    users_add.add_argument('--name', dest='name', action='store', required=True)
+    users_add.add_argument('--password', dest='password', action='store', required=True)
 
     users_delete = users_subparsers.add_parser('delete', help='delete user')
     users_delete.add_argument('--id', dest='id', action='store', required=True)
@@ -118,10 +122,10 @@ def main():
 
     users_update = users_subparsers.add_parser('update', help='update user')
     users_update.add_argument('--id', dest='id', action='store', required=False, default='_self')
-    users_update.add_argument('--admin', dest='id', action='store', required=False, default=None, type=str2bool)
-    users_update.add_argument('--email', dest='id', action='store', required=False, default=None)
-    users_update.add_argument('--name', dest='id', action='store', required=False, default=None)
-    users_update.add_argument('--password', dest='id', action='store', required=False, default=None)
+    users_update.add_argument('--admin', dest='admin', action='store', required=False, default=None, type=str2bool)
+    users_update.add_argument('--email', dest='email', action='store', required=False, default=None)
+    users_update.add_argument('--name', dest='name', action='store', required=False, default=None)
+    users_update.add_argument('--password', dest='password', action='store', required=False, default=None)
 
     users_list = users_subparsers.add_parser('list', help='list users')
     users_list.add_argument('--id', dest='id', action='store', required=False, default=None)
@@ -330,7 +334,11 @@ class DLMEngineCLI(object):
     def _api_body(**kwargs):
         params = dict()
         for key, value in kwargs.items():
-            if value is not None:
+            if value is None:
+                continue
+            elif value == ['']:
+                params[key] = list()
+            else:
                 params[key] = value
         return {"data": params}
 
@@ -392,22 +400,26 @@ class DLMEngineCLI(object):
                 ])
             print(table.draw())
 
+    @staticmethod
+    def permissions_print(data):
+        table = texttable.Texttable()
+        table.set_deco(texttable.Texttable.HEADER)
+        table.add_rows(rows=[['ID', 'permissions', 'users']], header=True)
+        for row in data['data']['results']:
+            table.add_row([
+                row['data']['id'],
+                list2newline_string(row['data']['permissions']),
+                list2newline_string(row['data']['users'])
+            ])
+        print(table.draw())
+
     def permissions_add(self, permission, permissions, users, method='post'):
         body = self._api_body(
             permissions=permissions,
             users=users
         )
         result = self._api(url='permissions/{0}'.format(permission), body=body, method=method)
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'permissions', 'users']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['permissions'],
-                result['data']['users']
-            ])
-            print(table.draw())
+        self.permissions_print({'data': {'results': [result]}})
 
     def permissions_delete(self, permission):
         self._api(url='permissions/{0}'.format(permission), method='delete')
@@ -415,16 +427,7 @@ class DLMEngineCLI(object):
 
     def permissions_get(self, permission):
         result = self._api(url='permissions/{0}'.format(permission))
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'permissions', 'users']], header=True)
-            table.add_row([
-                result['data']['id'],
-                result['data']['permissions'],
-                result['data']['users']
-            ])
-            print(table.draw())
+        self.permissions_print({'data': {'results': [result]}})
 
     def permissions_list(self, permission, permissions, users):
         params = self._api_params(
@@ -433,17 +436,7 @@ class DLMEngineCLI(object):
             users=users
         )
         result = self._api(url='permissions/_search', params=params)
-        if result:
-            table = texttable.Texttable()
-            table.set_deco(texttable.Texttable.HEADER)
-            table.add_rows(rows=[['ID', 'permissions', 'users']], header=True)
-            for row in result['data']['results']:
-                table.add_row([
-                    row['data']['id'],
-                    row['data']['permissions'],
-                    row['data']['users']
-                ])
-            print(table.draw())
+        self.permissions_print(result)
 
     def shield(self, lock, wait, wait_max, cmd, by):
         self.log.debug("waiting is set to {0}".format(wait))
