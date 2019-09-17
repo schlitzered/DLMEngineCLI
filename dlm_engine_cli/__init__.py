@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import random
+import shutil
 import socket
 import subprocess
 import sys
@@ -279,6 +280,7 @@ def main():
 class DLMEngineCLI(object):
     def __init__(self, raw):
         self.raw = raw
+        self.texttable = texttable.Texttable(max_width=shutil.get_terminal_size(fallback=(80, 24))[0])
         self.log = logging.getLogger('application')
         self.log.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(sys.stdout)
@@ -350,9 +352,8 @@ class DLMEngineCLI(object):
                 params[key] = value
         return params
 
-    @staticmethod
-    def locks_print(data):
-        table = texttable.Texttable()
+    def locks_print(self, data):
+        table = self.texttable
         table.set_deco(texttable.Texttable.HEADER)
         table.add_rows(rows=[['ID', 'acquired_by', 'acquired_since']], header=True)
         for row in data['data']['results']:
@@ -385,9 +386,8 @@ class DLMEngineCLI(object):
         result = self._api(url='locks/_search', params=params)
         self.locks_print(result)
 
-    @staticmethod
-    def permissions_print(data):
-        table = texttable.Texttable()
+    def permissions_print(self, data):
+        table = self.texttable
         table.set_deco(texttable.Texttable.HEADER)
         table.add_rows(rows=[['ID', 'permissions', 'users']], header=True)
         for row in data['data']['results']:
@@ -507,9 +507,8 @@ class DLMEngineCLI(object):
         self.log.info("finished running command: {0}".format(args))
         return p.wait()
 
-    @staticmethod
-    def users_print(data):
-        table = texttable.Texttable()
+    def users_print(self, data):
+        table = self.texttable
         table.set_deco(texttable.Texttable.HEADER)
         table.add_rows(rows=[['ID', 'admin', 'name', 'email']], header=True)
         for row in data['data']['results']:
@@ -546,9 +545,8 @@ class DLMEngineCLI(object):
         result = self._api(url='users/_search', params=params)
         self.users_print(result)
 
-    @staticmethod
-    def user_credentials_print(data):
-        table = texttable.Texttable()
+    def user_credentials_print(self, data):
+        table = self.texttable
         table.set_deco(texttable.Texttable.HEADER)
         table.add_rows(rows=[['ID', 'created', 'description']], header=True)
         for row in data['data']['results']:
