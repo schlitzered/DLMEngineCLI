@@ -310,6 +310,7 @@ class DLMEngineCLI(object):
         except (configparser.NoOptionError, configparser.NoSectionError):
             self.log.fatal('please configure the secret in the main section')
             sys.exit(1)
+        self.ca = self._config.get('main', 'ca', fallback=True)
 
     def _api(self, url, method='get', params=None, body=None):
         _method = getattr(requests, method)
@@ -320,7 +321,9 @@ class DLMEngineCLI(object):
                 'x-secret': self.secret
             },
             params=params,
-            json=body
+            json=body,
+            verify=self.ca
+
         )
         if result.json() is None:
             return
