@@ -467,6 +467,7 @@ class DLMEngineCLI(object):
             },
             timeout=2.0,
             url="{0}locks/{1}".format(self.endpoint, lock),
+            verify=self.ca
         )
         self.log.debug("http status_code is: {0}".format(resp.status_code))
         self.log.debug("http_response is {0}".format(resp.json()))
@@ -491,6 +492,7 @@ class DLMEngineCLI(object):
             },
             timeout=2.0,
             url="{0}locks/{1}".format(self.endpoint, lock),
+            verify=self.ca
         )
         self.log.debug("http status_code is: {0}".format(resp.status_code))
         self.log.debug("http_response is {0}".format(resp.json()))
